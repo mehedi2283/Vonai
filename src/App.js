@@ -12,6 +12,7 @@ export default function OrbButton() {
   const micSource = useRef(null);
   const audioCtx = useRef(null);
   const micStream = useRef(null);
+  const disconnecting = useRef(false);
 
   // 🧠 Initialize Vapi
   useEffect(() => {
@@ -19,11 +20,16 @@ export default function OrbButton() {
     vapiRef.current = vapi;
 
     vapi.on("call-start", () => {
+      if (disconnecting.current) return;
       setStatus("connected");
       setupMicAnalyser();
     });
-    vapi.on("speech-start", () => setStatus("speaking"));
-    vapi.on("speech-end", () => setStatus("listening"));
+    vapi.on("speech-start", () => {
+      if (!disconnecting.current) setStatus("speaking");
+    });
+    vapi.on("speech-end", () => {
+      if (!disconnecting.current) setStatus("listening");
+    });
     vapi.on("call-end", handleReset);
     vapi.on("error", handleReset);
 
@@ -60,6 +66,7 @@ export default function OrbButton() {
     stopMicAnalyser();
     setAmplitude(1);
     setStatus("idle");
+    disconnecting.current = false;
   };
 
   const stopMicAnalyser = () => {
@@ -75,14 +82,17 @@ export default function OrbButton() {
 
   const handleClick = async () => {
     if (!vapiRef.current) return;
+
     if (status === "idle") {
       try {
         setStatus("connecting");
+        disconnecting.current = false;
         await vapiRef.current.start(assistantId);
       } catch {
         handleReset();
       }
     } else {
+      disconnecting.current = true;
       try {
         await vapiRef.current.stop();
       } catch {}
@@ -90,10 +100,11 @@ export default function OrbButton() {
     }
   };
 
+  // Orb scale animation logic
   let orbScale = 1;
   if (status === "speaking") orbScale = 1.2 + amplitude * 0.15;
   else if (status === "listening" || status === "connected") orbScale = 1.05 + amplitude * 0.08;
-  else orbScale = 0.85;
+  else orbScale = 0.9;
 
   const label = {
     idle: "Talk to VONAI",
@@ -105,7 +116,7 @@ export default function OrbButton() {
 
   return (
     <div style={styles.wrapper}>
-      {/* 💎 White Glowing Orb */}
+      {/* 💎 Inset White Orb (Fixed Visuals) */}
       <div
         style={{
           ...styles.orb,
@@ -126,7 +137,7 @@ export default function OrbButton() {
           }}
         >
           {label}
-          {/* 🧭 Proper Mic Icon */}
+          {/* 🎤 Mic Icon */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
@@ -134,10 +145,10 @@ export default function OrbButton() {
             height="20"
             fill="#00E0B8"
             style={{
-              filter: "drop-shadow(0 0 4px rgba(0,224,184,0.6))",
+              filter: "drop-shadow(0 0 5px rgba(0,224,184,0.8))",
             }}
           >
-            <path d="M12 14c1.657 0 3-1.343 3-3V7a3 3 0 0 0-6 0v4c0 1.657 1.343 3 3 3zM19 11a7 7 0 0 1-14 0H3a9 9 0 0 0 18 0h-2zM12 19a9.003 9.003 0 0 0 8.944-8H19a7 7 0 0 1-14 0H3.056A9.003 9.003 0 0 0 12 19z" />
+            <path d="M12 14a3 3 0 0 0 3-3V7a3 3 0 0 0-6 0v4a3 3 0 0 0 3 3zM19 11a7 7 0 0 1-14 0H3a9 9 0 0 0 18 0h-2zM12 19a9.003 9.003 0 0 0 8.944-8H19a7 7 0 0 1-14 0H3.056A9.003 9.003 0 0 0 12 19z" />
           </svg>
         </span>
       </button>
@@ -151,18 +162,18 @@ export default function OrbButton() {
         /* 💥 Deep Hover Glow */
         .vonai-btn:hover {
           box-shadow: 
-            0 0 35px rgba(0,224,184,0.6),
-            0 0 65px rgba(108,99,255,0.3),
-            inset 0 0 30px rgba(0,224,184,0.35);
-          transform: scale(1);
+            0 0 45px rgba(0,224,184,0.7),
+            0 0 85px rgba(108,99,255,0.4),
+            inset 0 0 35px rgba(0,224,184,0.4);
+          transform: scale(1.06);
           transition: all 0.3s ease;
         }
 
         .vonai-btn:active {
           transform: scale(0.97);
           box-shadow:
-            0 0 20px rgba(0,224,184,0.4),
-            inset 0 0 20px rgba(0,224,184,0.3);
+            0 0 25px rgba(0,224,184,0.5),
+            inset 0 0 25px rgba(0,224,184,0.3);
         }
       `}</style>
     </div>
@@ -184,23 +195,25 @@ const styles = {
   },
   orb: {
     position: "absolute",
-    width: 240, // smaller orb
-    height: 240,
+    width: 340,
+    height: 340,
     borderRadius: "50%",
-    background:
-      "radial-gradient(circle at 40% 40%, rgba(255,255,255,0.5), rgba(255,255,255,0.05) 80%)",
-    boxShadow:
-      "inset 0 0 30px rgba(255,255,255,0.4), inset 0 0 80px rgba(255,255,255,0.2)",
+    background: "rgba(255,255,255,0.05)", // soft transparent base
+    boxShadow: `
+      inset 0 0 120px rgba(255,255,255,0.4),
+      inset 0 0 200px rgba(255,255,255,0.15),
+      0 0 120px rgba(108,99,255,0.15)
+    `,
     transition: "transform 0.15s ease-in-out",
     zIndex: 1,
   },
   button: {
     position: "relative",
-    backgroundColor: "#1e1e2f",
-    border: "1.5px solid #00E0B8",
+    backgroundColor: "#121224",
+    border: "1.5px solid rgba(0,224,184,0.3)",
     borderRadius: "60px",
-    padding: "16px 48px",
-    fontSize: "20px",
+    padding: "20px 64px",
+    fontSize: "22px",
     fontWeight: "600",
     color: "#00E0B8",
     letterSpacing: "0.5px",
@@ -210,7 +223,7 @@ const styles = {
     alignItems: "center",
     gap: "10px",
     boxShadow:
-      "0 0 12px rgba(0,224,184,0.35), inset 0 0 20px rgba(0,224,184,0.25)",
+      "0 0 15px rgba(0,224,184,0.35), inset 0 0 20px rgba(0,224,184,0.25)",
     transition: "all 0.3s ease",
   },
 };
