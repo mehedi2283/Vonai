@@ -100,7 +100,7 @@ export default function OrbButton() {
     }
   };
 
-  // Orb scale animation logic
+  // 💫 Orb scale logic
   let orbScale = 1;
   if (status === "speaking") orbScale = 1.2 + amplitude * 0.15;
   else if (status === "listening" || status === "connected") orbScale = 1.05 + amplitude * 0.08;
@@ -116,7 +116,7 @@ export default function OrbButton() {
 
   return (
     <div style={styles.wrapper}>
-      {/* 💎 Inset White Orb (Fixed Visuals) */}
+      {/* 💎 Blue Inner Glow Orb (No Outer Glow) */}
       <div
         style={{
           ...styles.orb,
@@ -198,11 +198,10 @@ const styles = {
     width: 340,
     height: 340,
     borderRadius: "50%",
-    background: "rgba(255,255,255,0.05)", // soft transparent base
+    background: "rgba(0, 0, 0, 0)", // fully transparent base
     boxShadow: `
-      inset 0 0 120px rgba(255,255,255,0.4),
-      inset 0 0 200px rgba(255,255,255,0.15),
-      0 0 120px rgba(108,99,255,0.15)
+      inset 0 0 160px rgba(0, 132, 255, 0.4),
+      inset 0 0 60px rgba(0, 132, 255, 0.3)
     `,
     transition: "transform 0.15s ease-in-out",
     zIndex: 1,
