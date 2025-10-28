@@ -12,7 +12,8 @@ export default function OrbButton() {
   const micSource = useRef(null);
   const audioCtx = useRef(null);
   const micStream = useRef(null);
-  const disconnecting = useRef(false);
+  const isDisconnecting = useRef(false);
+  const isActive = useRef(false); // ✅ ensures no post-disconnect state updates
 
   // 🧠 Initialize Vapi
   useEffect(() => {
@@ -20,17 +21,26 @@ export default function OrbButton() {
     vapiRef.current = vapi;
 
     vapi.on("call-start", () => {
-      if (disconnecting.current) return;
+      if (isDisconnecting.current) return;
+      isActive.current = true;
       setStatus("connected");
       setupMicAnalyser();
     });
+
     vapi.on("speech-start", () => {
-      if (!disconnecting.current) setStatus("speaking");
+      if (!isActive.current) return;
+      setStatus("speaking");
     });
+
     vapi.on("speech-end", () => {
-      if (!disconnecting.current) setStatus("listening");
+      if (!isActive.current) return;
+      setStatus("listening");
     });
-    vapi.on("call-end", handleReset);
+
+    vapi.on("call-end", () => {
+      handleReset();
+    });
+
     vapi.on("error", handleReset);
 
     return () => {
@@ -39,6 +49,7 @@ export default function OrbButton() {
     };
   }, [apiKey]);
 
+  // 🎤 Mic setup
   const setupMicAnalyser = async () => {
     try {
       audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -66,7 +77,8 @@ export default function OrbButton() {
     stopMicAnalyser();
     setAmplitude(1);
     setStatus("idle");
-    disconnecting.current = false;
+    isDisconnecting.current = false;
+    isActive.current = false;
   };
 
   const stopMicAnalyser = () => {
@@ -77,22 +89,24 @@ export default function OrbButton() {
     audioCtx.current = null;
     micSource.current = null;
     audioAnalyser.current = null;
-    setAmplitude(1);
   };
 
+  // 🎬 Handle connect/disconnect
   const handleClick = async () => {
     if (!vapiRef.current) return;
 
     if (status === "idle") {
       try {
         setStatus("connecting");
-        disconnecting.current = false;
+        isDisconnecting.current = false;
+        isActive.current = true;
         await vapiRef.current.start(assistantId);
       } catch {
         handleReset();
       }
     } else {
-      disconnecting.current = true;
+      isDisconnecting.current = true;
+      isActive.current = false; // ✅ fully disable event updates
       try {
         await vapiRef.current.stop();
       } catch {}
@@ -116,7 +130,7 @@ export default function OrbButton() {
 
   return (
     <div style={styles.wrapper}>
-      {/* 💎 Blue Inner Glow Orb (No Outer Glow) */}
+      {/* 💎 Blue Inner Glow Orb (Compact, No Outer Glow) */}
       <div
         style={{
           ...styles.orb,
@@ -133,7 +147,7 @@ export default function OrbButton() {
             animation: "fadeIn 0.4s ease forwards",
             display: "flex",
             alignItems: "center",
-            gap: "10px",
+            gap: "8px",
           }}
         >
           {label}
@@ -141,11 +155,11 @@ export default function OrbButton() {
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
-            width="20"
-            height="20"
+            width="18"
+            height="18"
             fill="#00E0B8"
             style={{
-              filter: "drop-shadow(0 0 5px rgba(0,224,184,0.8))",
+              filter: "drop-shadow(0 0 4px rgba(0,224,184,0.8))",
             }}
           >
             <path d="M12 14a3 3 0 0 0 3-3V7a3 3 0 0 0-6 0v4a3 3 0 0 0 3 3zM19 11a7 7 0 0 1-14 0H3a9 9 0 0 0 18 0h-2zM12 19a9.003 9.003 0 0 0 8.944-8H19a7 7 0 0 1-14 0H3.056A9.003 9.003 0 0 0 12 19z" />
@@ -162,18 +176,26 @@ export default function OrbButton() {
         /* 💥 Deep Hover Glow */
         .vonai-btn:hover {
           box-shadow: 
-            0 0 45px rgba(0,224,184,0.7),
-            0 0 85px rgba(108,99,255,0.4),
-            inset 0 0 35px rgba(0,224,184,0.4);
-          transform: scale(1.06);
+            0 0 30px rgba(0,224,184,0.7),
+            inset 0 0 25px rgba(0,224,184,0.4);
+          transform: scale(1.05);
           transition: all 0.3s ease;
         }
 
         .vonai-btn:active {
           transform: scale(0.97);
           box-shadow:
-            0 0 25px rgba(0,224,184,0.5),
-            inset 0 0 25px rgba(0,224,184,0.3);
+            0 0 20px rgba(0,224,184,0.5),
+            inset 0 0 20px rgba(0,224,184,0.3);
+        }
+
+        /* 📱 Responsive Adjustments */
+        @media (max-width: 600px) {
+          .vonai-btn {
+            padding: 10px 28px !important;
+            font-size: 14px !important;
+            border-radius: 40px !important;
+          }
         }
       `}</style>
     </div>
@@ -195,13 +217,13 @@ const styles = {
   },
   orb: {
     position: "absolute",
-    width: 340,
-    height: 340,
+    width: "220px",
+    height: "220px",
     borderRadius: "50%",
     background: "rgba(0, 0, 0, 0)", // fully transparent base
     boxShadow: `
-      inset 0 0 160px rgba(0, 132, 255, 0.4),
-      inset 0 0 60px rgba(0, 132, 255, 0.3)
+      inset 0 0 120px rgba(0, 132, 255, 0.4),
+      inset 0 0 40px rgba(0, 132, 255, 0.3)
     `,
     transition: "transform 0.15s ease-in-out",
     zIndex: 1,
@@ -210,19 +232,19 @@ const styles = {
     position: "relative",
     backgroundColor: "#121224",
     border: "1.5px solid rgba(0,224,184,0.3)",
-    borderRadius: "60px",
-    padding: "20px 64px",
-    fontSize: "22px",
+    borderRadius: "50px",
+    padding: "14px 42px",
+    fontSize: "18px",
     fontWeight: "600",
     color: "#00E0B8",
-    letterSpacing: "0.5px",
+    letterSpacing: "0.3px",
     cursor: "pointer",
     zIndex: 10,
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: "8px",
     boxShadow:
-      "0 0 15px rgba(0,224,184,0.35), inset 0 0 20px rgba(0,224,184,0.25)",
+      "0 0 10px rgba(0,224,184,0.3), inset 0 0 15px rgba(0,224,184,0.2)",
     transition: "all 0.3s ease",
   },
 };
