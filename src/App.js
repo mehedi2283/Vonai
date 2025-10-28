@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import Vapi from "@vapi-ai/web";
 
 export default function OrbButton() {
-  const apiKey = "53212b7c-2aeb-4d15-a78b-1b5eff1f8a28";
-  const assistantId = "b4352104-26c5-4f90-9931-be8944ad2ab5";
+  const apiKey = "537b8db8-3fc3-4b51-8a2e-e5bc1edf0b4d";
+  const assistantId = "58174aed-cbb0-4bb7-92fc-d3130ab25f24";
 
   const [status, setStatus] = useState("idle");
   const [amplitude, setAmplitude] = useState(1);
